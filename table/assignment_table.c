@@ -5,7 +5,7 @@ extern assign_table_t *assign_table;
 size_t
 get_hash_code(char *variable_name)
 {
-    size_t code = 10;
+    size_t code = 0;
     for(size_t i = 0; variable_name[i] != '\0'; i++)
     {
         code = (code * 116) + (size_t)variable_name[i];

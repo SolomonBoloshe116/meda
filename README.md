@@ -8,5 +8,5 @@ Install bison and flex
 
 # Usage
 
-`make`
+`make &&`
 `make run`

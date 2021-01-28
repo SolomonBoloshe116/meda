@@ -1,7 +1,10 @@
-name = 320
+let num = 10
 
-name
+num = num * 10
+print num
 
-name = name * 320
-name
+let d = num / 16
+undef num
+print d
+
 

@@ -1,0 +1,7 @@
+name = 320
+
+name
+
+name = name * 320
+name
+

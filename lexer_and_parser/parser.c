@@ -14,7 +14,6 @@
   char *string;
 
   struct _meda_literal_t *literal_t;
-  struct _meda_call_t     *call_t;
 }
 %define parse.error detailed
 

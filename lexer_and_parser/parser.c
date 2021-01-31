@@ -1,98 +1,165 @@
 %{
-    #include "./table/assignment_table.h"
-    #include <stdio.h>
+  #include "./table/literal.h"
+  #include "./table/variable.h"
 
-    extern int yylex(void);
-    extern void yyerror(const char *error_message);
+  #include <stdio.h>
+
+  extern int yylex(void);
+  extern void yyerror(const char *error_message);
 %}
 
 %union {
-    int number;
-    char *identifier;
+  int number;
+  char *string;
 
-    // struct assign_t *assing_ptr;
+  struct _meda_literal_t *literal_t;
+  struct _meda_call_t     *call_t;
 }
 %define parse.error detailed
 
 /* tokens without types */
-%token ADD   
-%token SUB   
-%token MULT 
-%token FSLASH
+
+/* operators */
+%token ADD
+%token SUB
+%token MULT
+%token DIV
+%token MOD
+
+/* other tokens */
+%token IO
+%token WRITE
+%token WRITE_LINE
+%token LET
 %token SEMI_COLON
 %token ASSIGN
 %token NEW_LINE
 %token UNDEF_VAR
-%token PRINT
-%token LET
+%token LBRACE
+%token RBRACE
+%token DOT
+%token TYPE_OF
+%token NIL
+
 /* tokens with types */
 %token <number> NUMBER
-%token <identifier> IDENTIFIER
+%token <string> IDENTIFIER
+%token <string> STRING
+%token <number> BOOL
 
 /* types */
-%type <number> term expr fact
-%type <number> assign
+%type <number> math_fact math_term math_expr
+%type <string> type_of
+%type <literal_t> literal
 
 %start prog
-
 %%
 prog: 
     %empty
   | prog line
   ;
 
-line: NEW_LINE
-     | expr NEW_LINE
-     | assign NEW_LINE line
-     | error NEW_LINE  { yyerrok; }
-     | PRINT expr
-      {
-        printf("=> %d\n", $2);
-      }
-     ;
+/* void */
+line:
+    NEW_LINE
+  | expr NEW_LINE
+  | error NEW_LINE  { yyerrok; }
+  ;
 
-/* int */
-assign:
-       /* char[]     =     int*/
-        LET IDENTIFIER ASSIGN expr { $$ = make_new_assignment($2, $4); }
-      | IDENTIFIER ASSIGN expr { $$ = make_existing_assignment($1, $3); }
-      | UNDEF_VAR IDENTIFIER  { remove_assignment($2); }
-      ;
-
-/* int */
+/* void */
 expr:
-      /* int + int */
-      expr ADD term { $$ = $1 + $3; }
-    | expr SUB term { $$ = $1 - $3; }
-    | term
-    ;
+    io_call
+  | assign
+  ;
 
-term: term MULT   fact  { $$ = $1 * $3; }
-    | term FSLASH fact
-      { 
-        if( $3 == 0)
+/* void 
+update_var:
+    IDENTIFIER ASSIGN literal              {   }
+  | IDENTIFIER ASSIGN type_of              {   }
+  | IDENTIFIER ASSIGN math_expr            {   }
+  ;
+*/
+/* void */
+assign:
+    LET IDENTIFIER ASSIGN literal   { insert_lit_var_into_table($2, $4);    }
+  ;
+
+/* number */
+math_expr:
+    math_expr ADD math_term         { $$ = $1 + $3; }
+  | math_expr SUB math_term         { $$ = $1 - $3; }
+  | math_term
+  ;
+
+/* number */
+math_term:
+    math_term DIV  math_fact
+    {
+        if($3 == 0)
         {
-            printf("Error: ZerroDivisionError (%d by 0)\n", $1);
-            exit(-1);
+          fprintf(stderr, "ZeroDivisionError (%d divided by 0)\n", $1);
+          exit(EXIT_FAILURE);
         }
         else
         {
-            $$ = $1 / $3;
+          $$ = $1 / $3;
         }
+    }
+  | math_term MULT math_fact         { $$ = $1 * $3; }
+  | math_term MOD  math_fact
+    {
+      if($3 == 0)
+      {
+        fprintf(stderr, "ZeroDivisionError (%d divided by 0)\n", $1);
+        exit(EXIT_FAILURE);
       }
-    | fact
-    ;
+      else
+      {
+        $$ = $1 % $3;
+      }
+    }
+  | math_fact
+  ;
 
-fact:
-      NUMBER
-    | IDENTIFIER   { $$ = get_identifier_value($1); }
-    | '(' expr ')' { $$ = $2; }
-    ;
+/* number */
+math_fact:
+    NUMBER
+  /*| IDENTIFIER                     { $$ = get_identifier_value($1); }  */
+  | LBRACE math_expr RBRACE        { $$ = $2;                       }
+  ;
+
+/* void */
+io_call: 
+    /* io.write(call) */
+    IO DOT WRITE LBRACE literal RBRACE         { io_write_lit($5, 1);          }
+    /* io.write_line(call) */
+  | IO DOT WRITE_LINE LBRACE literal RBRACE    { io_write_line_lit($5, 1);     }
+    /* io.write(typeof(32)) */
+  | IO DOT WRITE LBRACE IDENTIFIER RBRACE      { io_write_identifier($5);      }
+  /* io.write_line(a) */
+  | IO DOT WRITE_LINE LBRACE IDENTIFIER RBRACE { io_write_line_identifier($5); }
+  ;
+
+/* char* */
+type_of:
+    TYPE_OF LBRACE literal RBRACE    { $$ = get_type_of_lit($3); }
+  | TYPE_OF LBRACE IDENTIFIER RBRACE { $$ = get_type_of_var($3); }
+  ;
+
+/* literal_t*/
+literal:
+    STRING        { $$ = make_string_lit($1); }
+  | BOOL          { $$ = make_bool_lit($1);   }
+  | NIL           { $$ = make_nil_lit();      }
+  | math_expr     { $$ = make_number_lit($1); }
+  | type_of       { $$ = make_string_lit($1); }
+  ;
+
 %%
 
 void
 yyerror (const char *msg)
 {
-   printf("Error: %s\n", msg);
-   exit(EXIT_FAILURE);
+  printf("Error: %s\n", msg);
+  exit(EXIT_FAILURE);
 }

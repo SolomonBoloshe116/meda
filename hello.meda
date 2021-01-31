@@ -1,10 +1,6 @@
-let num = 10
+let a = 10
 
-num = num * 10
-print num
+let b = typeof(a)
 
-let d = num / 16
-undef num
-print d
-
-
+io.write_line(b)
+io.write_line("finished");

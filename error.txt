@@ -1,0 +1,3 @@
+io.write(typeof(32))
+io.write_line(typeof("adf"))
+io.write_line(typeof(true))

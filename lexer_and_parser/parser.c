@@ -1,3 +1,4 @@
+/* THIS IS YACC FILE*/
 %{
   #include "./table/literal.h"
   #include "./table/variable.h"
